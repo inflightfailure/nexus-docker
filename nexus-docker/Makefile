@@ -3,7 +3,7 @@
 help:
 	@echo "Available commands:"
 	@echo "  credentials - Generate secure credentials (REQUIRED before first run)"
-	@echo "  start       - Start all services with docker-compose"
+	@echo "  start       - Start all services with docker compose"
 	@echo "  stop        - Stop all services"
 	@echo "  restart     - Restart all services"
 	@echo "  setup       - Run initial Nexus setup and EULA acceptance"
@@ -19,11 +19,11 @@ credentials:
 	../scripts/generate-credentials.sh
 
 start:
-	@if [ ! -f ../.env ]; then echo "❌ Error: .env file not found. Run 'make credentials' first."; exit 1; fi
-	docker-compose up -d
+	@if [ ! -f .env ]; then echo "❌ Error: .env file not found. Run 'make credentials' first."; exit 1; fi
+	docker compose up -d
 
 stop:
-	docker-compose down
+	docker compose down
 
 restart: stop start
 
@@ -37,11 +37,11 @@ test-all:
 	./scripts/testing/test-runner.sh
 
 clean:
-	docker-compose down -v
+	docker compose down -v
 	docker system prune -f
 
 logs:
-	docker-compose logs -f
+	docker compose logs -f
 
 lint:
 	../scripts/lint.sh
