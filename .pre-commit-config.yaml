@@ -1,0 +1,85 @@
+repos:
+  # General file checks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      # File format and syntax
+      - id: check-yaml
+        args: ['--unsafe']
+      - id: check-json
+      - id: check-toml
+      - id: check-merge-conflict
+      - id: check-case-conflict
+      - id: check-added-large-files
+        args: ['--maxkb=1024']
+
+      # Line ending and whitespace
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+        args: [--markdown-linebreak-ext=md]
+      - id: mixed-line-ending
+        args: ['--fix=lf']
+
+      # Security and secrets
+      - id: detect-private-key
+
+  # Shell script linting
+  - repo: https://github.com/shellcheck-py/shellcheck-py
+    rev: v0.10.0.1
+    hooks:
+      - id: shellcheck
+        args: ['-e', 'SC1091']
+
+  # Security scanning
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.5.0
+    hooks:
+      - id: detect-secrets
+        args: ['--baseline', '.secrets.baseline']
+        exclude: |
+          (?x)^(
+            .*\.lock$|
+            .*\.log$|
+            .*\.pem$|
+            .*\.crt$|
+            .*\.key$
+          )$
+
+  # Markdown linting
+  - repo: https://github.com/igorshubovych/markdownlint-cli
+    rev: v0.45.0
+    hooks:
+      - id: markdownlint
+        args: ['--fix']
+
+  # Custom local hooks
+  - repo: local
+    hooks:
+      # Validate docker-compose files (only if docker compose is available)
+      - id: docker-compose-check
+        name: Validate docker-compose files
+        entry: bash
+        args: ['-c', 'if command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then cd nexus-docker && POSTGRES_PASSWORD=test NEXUS_ADMIN_PASSWORD=test docker compose config -q >/dev/null 2>&1 && echo "Docker compose syntax valid" || echo "Docker compose syntax check failed"; else echo "Skipping docker compose validation (not available)"; fi']
+        language: system
+        files: docker-compose.*\.ya?ml$
+
+      # Check script permissions
+      - id: check-executables
+        name: Check that scripts are executable
+        entry: scripts/check-executables.sh
+        language: script
+        pass_filenames: false
+        always_run: true
+
+# Global configuration
+exclude: |
+  (?x)^(
+    .*\.lock$|
+    .*\.log$|
+    .*\.pem$|
+    .*\.crt$|
+    .*\.key$|
+    .*/certs/.*$|
+    data/.*$|
+    .git/.*$
+  )$

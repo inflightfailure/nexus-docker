@@ -1,0 +1,37 @@
+# Markdownlint configuration
+# See: https://github.com/DavidAnson/markdownlint/blob/main/doc/Rules.md
+
+# Enable all rules by default
+default: true
+
+# Disable specific rules
+MD013: false  # Line length (we'll handle this with prettier)
+MD033: false  # Allow inline HTML
+MD041: false  # Allow files to not start with H1 (useful for READMs in subdirectories)
+
+# Configure specific rules
+MD003:  # Header style
+  style: "atx"  # Use # style headers
+
+MD007:  # Unordered list indentation
+  indent: 2
+
+MD012:  # Multiple consecutive blank lines
+  maximum: 2
+
+MD024:  # Multiple headers with same content
+  allow_different_nesting: true
+  siblings_only: true
+
+MD026:  # Trailing punctuation in header
+  punctuation: ".,;:!?"
+
+MD029:  # Ordered list item prefix
+  style: "ordered"
+
+MD040: false  # Fenced code language (allow code blocks without language)
+
+MD046:  # Code block style
+  style: "fenced"
+
+MD051: false  # Link fragments (disable strict link checking)

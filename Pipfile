@@ -1,0 +1,27 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+# Production dependencies (none for this project)
+
+[dev-packages]
+# Pre-commit and code quality tools
+pre-commit = "*"
+detect-secrets = "*"
+
+# Optional: Additional development tools
+black = "*"          # Python code formatter (if we add Python scripts)
+flake8 = "*"         # Python linter (if we add Python scripts)
+pytest = "*"         # Testing framework (if we add Python tests)
+
+[requires]
+python_version = "3.13"
+
+[scripts]
+# Development workflow scripts
+setup = "bash -c 'pre-commit install && pre-commit install --hook-type commit-msg'"
+lint = "pre-commit run --all-files"
+update-hooks = "pre-commit autoupdate"
+check-secrets = "bash -c 'detect-secrets scan . > .secrets.baseline'"

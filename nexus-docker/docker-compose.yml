@@ -1,0 +1,85 @@
+services:
+  traefik:
+    image: traefik:v3.0
+    container_name: traefik
+    ports:
+      - "80:80"    # HTTP
+      - "443:443"  # HTTPS
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./traefik/traefik.yml:/etc/traefik/traefik.yml:ro
+      - ./traefik/certs:/certs:ro
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:17
+    container_name: nexus-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-nexus}
+      POSTGRES_USER: ${POSTGRES_USER:-nexus}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env file}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./config/postgres/postgresql.conf:/etc/postgresql/postgresql.conf:ro
+    command: ["postgres", "-c", "config_file=/etc/postgresql/postgresql.conf"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-nexus} -d ${POSTGRES_DB:-nexus}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  nexus:
+    image: sonatype/nexus3:3.82.0
+    container_name: nexus
+    restart: unless-stopped
+    ports:
+      - "${NEXUS_HTTP_PORT:-8081}:8081"  # Web UI
+      - "${NEXUS_DOCKER_PORT:-8082}:8082"  # Docker HTTP
+      - "${NEXUS_DOCKER_PROXY_PORT:-8083}:8083"  # Docker HTTPS (optional)
+    volumes:
+      - nexus-data:/nexus-data  # Named volume instead of bind mount
+    environment:
+      # JVM settings
+      - INSTALL4J_ADD_VM_PARAMS=-Xms2g -Xmx4g -Djava.util.prefs.userRoot=/nexus-data/javaprefs
+      # PostgreSQL backend configuration
+      - NEXUS_DATASTORE_ENABLED=true
+      - NEXUS_DATASTORE_NEXUS_JDBCURL=jdbc:postgresql://postgres:5432/${POSTGRES_DB:-nexus}?maxPoolSize=10&minPoolSize=2&connectionTimeout=30000
+      - NEXUS_DATASTORE_NEXUS_USERNAME=${POSTGRES_USER:-nexus}
+      - NEXUS_DATASTORE_NEXUS_PASSWORD=${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env file}
+      # Security settings
+      - NEXUS_SECURITY_RANDOMPASSWORD=${NEXUS_SECURITY_RANDOMPASSWORD:-false}
+      # Skip EULA and onboarding
+      - NEXUS_SECURITY_RANDOMPASSWORD=false
+    depends_on:
+      postgres:
+        condition: service_healthy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.nexus.rule=Host(`nexus.example.com`)"
+      - "traefik.http.routers.nexus.entrypoints=websecure"
+      - "traefik.http.routers.nexus.tls=true"
+      - "traefik.http.services.nexus.loadbalancer.server.port=8081"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+
+  nexus-init:
+    image: curlimages/curl:latest
+    container_name: nexus-init
+    depends_on:
+      nexus:
+        condition: service_healthy
+    volumes:
+      - ./provisioning:/scripts:ro
+      - nexus-data:/nexus-data:ro  # Access the named volume for reading admin password
+    command: ["/scripts/init.sh"]
+    restart: "no"  # Run once only
+
+volumes:
+  postgres-data:      # Docker manages this automatically
+  nexus-data:         # Docker manages Nexus data automatically
